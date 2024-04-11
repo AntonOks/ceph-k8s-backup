@@ -47,6 +47,9 @@ resticSecretName: restic
 # Every hour at 48 minutes past the hour
 schedule: "48 * * * *"
 
+# Backup job fail after 12 hours
+backupMaxDurationSeconds: 43200
+
 podAnnotations: {}
 
 podSecurityContext: {}

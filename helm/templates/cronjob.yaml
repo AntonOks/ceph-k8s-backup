@@ -63,6 +63,8 @@ spec:
                   value: "{{ .Values.backupImage.repository }}:{{ .Values.backupImage.tag | default .Chart.AppVersion }}"
                 - name: BACKUP_IMAGE_PULL_POLICY
                   value: {{ .Values.backupImage.pullPolicy }}
+                - name: BACKUP_MAX_DURATION
+                  value: "{{ printf "%.0f" .Values.backupMaxDurationSeconds }}"
                 {{- if .Values.jaeger.enabled }}
                 - name: OTEL_TRACES_EXPORTER
                   value: "otlp_proto_grpc"
