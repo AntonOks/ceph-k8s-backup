@@ -115,14 +115,19 @@ def main():
         'user': os.environ['CEPH_USER'],
     }
 
+    if os.environ.get('BACKUP_MAX_DURATION'):
+        max_backup_duration = int(os.environ['BACKUP_MAX_DURATION'], 10)
+    else:
+        max_backup_duration = 12 * 3600  # 12 hours
+
     with tracer.start_as_current_span(
         'ceph-backup',
         attributes={'cleanup_only': args.cleanup_only},
     ):
-        backup_main(now, ceph, args.cleanup_only)
+        backup_main(now, ceph, args.cleanup_only, max_backup_duration)
 
 
-def backup_main(now, ceph, cleanup_only):
+def backup_main(now, ceph, cleanup_only, max_backup_duration):
     api = k8s_client.ApiClient()
     corev1 = k8s_client.CoreV1Api(api)
 
@@ -180,13 +185,13 @@ def backup_main(now, ceph, cleanup_only):
                 'backup_rbd_fs',
                 attributes=vol_otel_attributes,
             ):
-                backup_rbd_fs(api, ceph, vol, now)
+                backup_rbd_fs(api, ceph, vol, now, max_backup_duration)
         else:
             with tracer.start_as_current_span(
                 'backup_rbd_block',
                 attributes=vol_otel_attributes,
             ):
-                backup_rbd_block(api, ceph, vol, now)
+                backup_rbd_block(api, ceph, vol, now, max_backup_duration)
 
 
 def build_list_to_backup(api, now):
@@ -369,7 +374,7 @@ def cleanup_job(api, job):
     return True
 
 
-def backup_rbd_fs(api, ceph, vol, now):
+def backup_rbd_fs(api, ceph, vol, now, max_backup_duration):
     batchv1 = k8s_client.BatchV1Api(api)
 
     rbd_fq_image = vol['rbd_pool'] + '/' + vol['rbd_name']
@@ -415,7 +420,7 @@ def backup_rbd_fs(api, ceph, vol, now):
                 },
             ),
             spec=k8s_client.V1JobSpec(
-                active_deadline_seconds=12 * 3600,
+                active_deadline_seconds=max_backup_duration,
                 template=k8s_client.V1PodTemplateSpec(
                     metadata=k8s_client.V1ObjectMeta(
                         labels=labels,
@@ -480,7 +485,7 @@ def backup_rbd_fs(api, ceph, vol, now):
     logger.info("Created job %s", job.metadata.name)
 
 
-def backup_rbd_block(api, ceph, vol, now):
+def backup_rbd_block(api, ceph, vol, now, max_backup_duration):
     corev1 = k8s_client.CoreV1Api(api)
     batchv1 = k8s_client.BatchV1Api(api)
 
@@ -584,7 +589,7 @@ def backup_rbd_block(api, ceph, vol, now):
                 },
             ),
             spec=k8s_client.V1JobSpec(
-                active_deadline_seconds=12 * 3600,
+                active_deadline_seconds=max_backup_duration,
                 template=k8s_client.V1PodTemplateSpec(
                     metadata=k8s_client.V1ObjectMeta(
                         labels=labels,
