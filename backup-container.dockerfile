@@ -9,11 +9,15 @@ RUN apt-get update -yy && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-ARG RESTIC_VERSION=0.16.4
-ARG RESTIC_DL_HASH=3d4d43c169a9e28ea76303b1e8b810f0dcede7478555fdaa8959971ad499e324
-RUN curl -Lo /tmp/restic_${RESTIC_VERSION}_linux_amd64.bz2 https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2 && \
-    printf "${RESTIC_DL_HASH}  /tmp/restic_${RESTIC_VERSION}_linux_amd64.bz2\\n" | sha256sum -c && \
-    bunzip2 < /tmp/restic_${RESTIC_VERSION}_linux_amd64.bz2 > /usr/local/bin/restic && \
+ARG RESTIC_VERSION=0.16.5
+ARG TARGETPLATFORM
+
+RUN if [ ${TARGETPLATFORM} = "linux/amd64" ]; then SUFFIX=linux_amd64; HASH=f1a9c39d396d1217c05584284352f4a3bef008be5d06ce1b81a6cf88f6f3a7b1; \
+    elif [ ${TARGETPLATFORM} = "linux/arm64" ]; then SUFFIX=linux_arm64; HASH=41cc6ad3ac5e99ee088011f628fafcb4fa1e4d3846be2333e5c2a3f6143cd0c1; \
+    else echo "no URL for $(TARGETPLATFORM)"; exit 1; fi && \
+    curl -Lo /tmp/restic.bz2 https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_${SUFFIX}.bz2 && \
+    printf "${HASH}  /tmp/restic.bz2\\n" | sha256sum -c && \
+    bunzip2 < /tmp/restic.bz2 > /usr/local/bin/restic && \
     chmod +x /usr/local/bin/restic
 
 ARG QCOW2_WRITER_VERSION=0.1.0
