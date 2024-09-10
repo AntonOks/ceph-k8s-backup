@@ -65,6 +65,8 @@ spec:
                   value: {{ .Values.backupImage.pullPolicy }}
                 - name: BACKUP_MAX_DURATION
                   value: "{{ printf "%.0f" .Values.backupMaxDurationSeconds }}"
+                - name: RESTIC_READ_CONCURRENCY
+                  value: {{ .Values.resticReadConcurrency | quote }}
                 {{- if .Values.jaeger.enabled }}
                 - name: OTEL_TRACES_EXPORTER
                   value: "otlp_proto_grpc"

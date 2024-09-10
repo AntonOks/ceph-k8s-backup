@@ -31,6 +31,8 @@ BACKUP_IMAGE_PULL_POLICY = os.environ.get(
     'IfNotPresent',
 )
 
+READ_CONCURRENCY = os.environ.get('RESTIC_READ_CONCURRENCY', '2')
+
 
 def render_date(dt):
     s = dt.isoformat()
@@ -450,6 +452,7 @@ def backup_rbd_fs(api, ceph, vol, now, max_backup_duration):
                                     RESTIC_PASSWORD=(
                                         'secret', RESTIC_SECRET_NAME, 'password',
                                     ),
+                                    RESTIC_READ_CONCURRENCY=READ_CONCURRENCY,
                                 ),
                                 volume_mounts=[
                                     k8s_client.V1VolumeMount(
@@ -620,6 +623,7 @@ def backup_rbd_block(api, ceph, vol, now, max_backup_duration):
                                     RESTIC_PASSWORD=(
                                         'secret', RESTIC_SECRET_NAME, 'password',
                                     ),
+                                    RESTIC_READ_CONCURRENCY=READ_CONCURRENCY,
                                 ),
                                 volume_mounts=[
                                     k8s_client.V1VolumeMount(
