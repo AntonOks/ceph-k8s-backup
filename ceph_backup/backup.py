@@ -140,21 +140,8 @@ def backup_main(now, ceph, cleanup_only, max_backup_duration):
         return
 
     # Back up volumes
-    to_backup = build_list_to_backup(api, now)
+    to_backup = build_list_to_backup(api, now, currently_backing_up)
     for vol in to_backup:
-        if vol['pv'] in currently_backing_up:
-            logger.warning(
-                "Skipping backup, job exists: pv=%s, pvc=%s/%s, rbd=%s/%s, "
-                + "mode=%s, size=%s, job=%s",
-                vol['pv'],
-                vol['namespace'], vol['name'],
-                vol['rbd_pool'], vol['rbd_name'],
-                vol['mode'],
-                vol['size'] or 'unknown',
-                currently_backing_up[vol['pv']],
-            )
-            continue
-
         logger.info(
             'Backing up: pv=%s, pvc=%s/%s, rbd=%s/%s, mode=%s, size=%s',
             vol['pv'],
@@ -196,12 +183,12 @@ def backup_main(now, ceph, cleanup_only, max_backup_duration):
                 backup_rbd_block(api, ceph, vol, now, max_backup_duration)
 
 
-def build_list_to_backup(api, now):
+def build_list_to_backup(api, now, currently_backing_up):
     to_backup = list_volumes_to_backup(api)
 
     total_volumes = len(to_backup)
 
-    # Select based on last attempt
+    # Filter based on last attempt
     limit = 24 * 3600 - 30 * 60  # 23:30:00
     to_backup = [
         vol for vol in to_backup
@@ -222,10 +209,29 @@ def build_list_to_backup(api, now):
     # we do 1/24th of the total backups
     # This is to spread out the backup times if they all coincide
     do_now = min(math.ceil(total_volumes / 24), len(to_backup))
-    logger.info("%d volumes to backup, doing %d now", len(to_backup), do_now)
-    to_backup = to_backup[:do_now]
 
-    return to_backup
+    to_backup_final = []
+    for vol in to_backup:
+        if len(to_backup_final) >= do_now:
+            break
+
+        if vol['pv'] in currently_backing_up:
+            logger.warning(
+                "Skipping backup, job exists: pv=%s, pvc=%s/%s, rbd=%s/%s, "
+                + "mode=%s, size=%s, job=%s",
+                vol['pv'],
+                vol['namespace'], vol['name'],
+                vol['rbd_pool'], vol['rbd_name'],
+                vol['mode'],
+                vol['size'] or 'unknown',
+                currently_backing_up[vol['pv']],
+            )
+            continue
+
+        to_backup_final.append(vol)
+
+    logger.info("%d volumes to backup, doing %d now", len(to_backup), len(to_backup_final))
+    return to_backup_final
 
 
 @tracer.start_as_current_span('cleanup_jobs')
