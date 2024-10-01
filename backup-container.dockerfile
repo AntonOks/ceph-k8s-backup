@@ -9,11 +9,11 @@ RUN apt-get update -yy && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-ARG RESTIC_VERSION=0.17.0
+ARG RESTIC_VERSION=0.17.1
 ARG TARGETPLATFORM
 
-RUN if [ ${TARGETPLATFORM} = "linux/amd64" ]; then SUFFIX=linux_amd64; HASH=fec7ade9f12c30bd6323568dbb0f81a3f98a3c86acc8161590235c0f18194022; \
-    elif [ ${TARGETPLATFORM} = "linux/arm64" ]; then SUFFIX=linux_arm64; HASH=f9ad4d91c181da2968ccdecb5238bf872f824fe1e40253f3347c4025192f19c9; \
+RUN if [ ${TARGETPLATFORM} = "linux/amd64" ]; then SUFFIX=linux_amd64; HASH=bdfaf16fe933136e3057e64e28624f2e0451dbd47e23badb2d37dbb60fdb6a70; \
+    elif [ ${TARGETPLATFORM} = "linux/arm64" ]; then SUFFIX=linux_arm64; HASH=aa9d86ac5f261f6a8295d5503bb27761ba7fe1fc1cf26fa52e7ab249b9a04716; \
     else echo "no URL for $(TARGETPLATFORM)"; exit 1; fi && \
     curl -Lo /tmp/restic.bz2 https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_${SUFFIX}.bz2 && \
     printf "${HASH}  /tmp/restic.bz2\\n" | sha256sum -c && \
