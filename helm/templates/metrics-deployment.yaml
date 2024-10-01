@@ -38,6 +38,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: AGE_BUCKETS
+              value: {{ .Values.metrics.ageBuckets | quote }}
             {{- if .Values.jaeger.enabled }}
             - name: OTEL_TRACES_EXPORTER
               value: "otlp_proto_grpc"

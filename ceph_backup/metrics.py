@@ -5,6 +5,7 @@ import kubernetes.config as k8s_config
 import logging
 import math
 import opentelemetry.trace
+import os
 from prometheus_client import REGISTRY, make_wsgi_app
 from prometheus_client.exposition import ThreadingWSGIServer
 from prometheus_client.metrics_core import GaugeMetricFamily, \
@@ -17,7 +18,7 @@ from .metadata import METADATA_PREFIX, NAMESPACE, list_volumes_to_backup
 logger = logging.getLogger(__name__)
 tracer = opentelemetry.trace.get_tracer(__name__)
 
-AGE_BUCKETS = 48
+AGE_BUCKETS = int(os.environ.get('AGE_BUCKETS', '48'), 10)
 
 
 def print_table(log, table, header=None):

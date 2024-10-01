@@ -74,6 +74,9 @@ metrics:
     port: 8080
   resources: {}
 
+  # Number of buckets in the backup age histogram
+  ageBuckets: 48
+
 jaeger:
   enabled: false
   resources: {}
