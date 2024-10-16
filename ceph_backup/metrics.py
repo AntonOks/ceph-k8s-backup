@@ -74,7 +74,7 @@ def collect(show_table=False):
 
     volumes_backed_up = GaugeMetricFamily(
         'volumes_backed_up',
-        "Volumes that have backups enabled",
+        "Volumes that have backups enabled (DEPRECATED)",
         labels=['namespace'],
     )
     volume_backups_due_hist = GaugeHistogramMetricFamily(
@@ -89,8 +89,13 @@ def collect(show_table=False):
     )
     volume_backup_age = GaugeHistogramMetricFamily(
         'volume_backup_age',
-        "Volumes to backup by last success age (in hours)",
+        "Volumes to backup by last success age (in hours) (DEPRECATED)",
         labels=['namespace'],
+    )
+    volume_last_backup = GaugeMetricFamily(
+        'volume_last_backup',
+        "Date of last backup of each volume",
+        labels=['namespace', 'persistentvolumeclaim'],
     )
     volume_never_backed_up = GaugeMetricFamily(
         'volume_never_backed_up',
@@ -143,6 +148,11 @@ def collect(show_table=False):
             age = math.floor(age / 3600)
             age = min(AGE_BUCKETS, age)
             data['age'][age] += 1
+
+            volume_last_backup.add_metric(
+                [vol['namespace'], vol['name']],
+                vol['last_backup'].timestamp(),
+            )
 
     for namespace, data in namespaces.items():
         volumes_backed_up.add_metric([namespace], data['volumes'])
@@ -241,6 +251,7 @@ def collect(show_table=False):
         volume_backups_due_hist,
         volume_backups_due,
         volume_backup_age,
+        volume_last_backup,
         volume_never_backed_up,
         running_backup_jobs,
         failed_backup_jobs,
