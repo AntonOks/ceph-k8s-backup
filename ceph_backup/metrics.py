@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 import kubernetes.client as k8s_client
 import kubernetes.config as k8s_config
 import logging
@@ -53,7 +53,7 @@ def print_table(log, table, header=None):
 
 @tracer.start_as_current_span('collect')
 def collect(show_table=False):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     with k8s_client.ApiClient() as api:
         to_backup = list_volumes_to_backup(api)

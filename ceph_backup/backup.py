@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 import kubernetes.client as k8s_client
 import kubernetes.config as k8s_config
 import logging
@@ -91,7 +91,7 @@ def main():
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     parser = argparse.ArgumentParser(
         'ceph-backup',
@@ -199,7 +199,7 @@ def build_list_to_backup(api, now, currently_backing_up):
     ]
 
     # Order the list by last backup
-    time_zero = datetime(1970, 1, 1)
+    time_zero = datetime(1970, 1, 1, tzinfo=timezone.utc)
     to_backup = sorted(
         to_backup,
         key=lambda vol: vol['last_attempt'] or time_zero,
