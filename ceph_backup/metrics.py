@@ -77,7 +77,12 @@ def collect(show_table=False):
         "Volumes that have backups enabled",
         labels=['namespace'],
     )
-    volume_backup_due = GaugeHistogramMetricFamily(
+    volume_backups_due_hist = GaugeHistogramMetricFamily(
+        'volume_backups_due',
+        "Volumes to backup by due date (in hours) (DEPRECATED)",
+        labels=['namespace'],
+    )
+    volume_backups_due = GaugeMetricFamily(
         'volume_backups_due',
         "Volumes to backup by due date (in hours)",
         labels=['namespace'],
@@ -151,7 +156,10 @@ def collect(show_table=False):
             buckets.append((str(due), sum_value))
         sum_value += data['due'][24]
         buckets.append(('+Inf', sum_value))
-        volume_backup_due.add_metric([namespace], buckets, sum_value)
+        volume_backups_due_hist.add_metric([namespace], buckets, sum_value)
+
+        if data['due'][0] > 0:
+            volume_backups_due.add_metric([namespace], data['due'][0])
 
         sum_value = 0
         buckets = []
@@ -230,7 +238,8 @@ def collect(show_table=False):
 
     return [
         volumes_backed_up,
-        volume_backup_due,
+        volume_backups_due_hist,
+        volume_backups_due,
         volume_backup_age,
         volume_never_backed_up,
         running_backup_jobs,
