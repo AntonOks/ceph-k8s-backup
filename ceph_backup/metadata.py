@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import functools
 import kubernetes.client as k8s_client
 import logging
@@ -32,7 +32,9 @@ def parse_bool(value):
 
 def parse_date(s):
     assert len(s) == 20 and s[-1] == 'Z'
-    return datetime.fromisoformat(s[:-1])
+    dt = datetime.fromisoformat(s[:-1])
+    assert dt.tzinfo is None
+    return dt.replace(tzinfo=timezone.utc)
 
 
 WARN_LIMIT = 3
@@ -113,9 +115,9 @@ def list_volumes_to_backup(api):
             # Don't backup a volume for 6 hours
             last_attempt = pv.metadata.creation_timestamp - timedelta(hours=18)
             if last_attempt.tzinfo is None:
-                pass
+                last_attempt = last_attempt.replace(tzinfo=timezone.utc)
             elif last_attempt.tzinfo.utcoffset(last_attempt) == timedelta(0):
-                last_attempt = last_attempt.replace(tzinfo=None)
+                pass
             else:
                 raise AssertionError("Non-UTC creationTimestamp")
         if pv.spec.csi and pv.spec.csi.driver == 'rbd.csi.ceph.com':

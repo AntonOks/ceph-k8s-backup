@@ -1,5 +1,5 @@
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 import kubernetes.client as k8s_client
 import kubernetes.config as k8s_config
 import logging
@@ -53,7 +53,7 @@ def print_table(log, table, header=None):
 
 @tracer.start_as_current_span('collect')
 def collect(show_table=False):
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     with k8s_client.ApiClient() as api:
         to_backup = list_volumes_to_backup(api)
@@ -74,18 +74,28 @@ def collect(show_table=False):
 
     volumes_backed_up = GaugeMetricFamily(
         'volumes_backed_up',
-        "Volumes that have backups enabled",
+        "Volumes that have backups enabled (DEPRECATED)",
         labels=['namespace'],
     )
-    volume_backup_due = GaugeHistogramMetricFamily(
+    volume_backups_due_hist = GaugeHistogramMetricFamily(
+        'volume_backups_due',
+        "Volumes to backup by due date (in hours) (DEPRECATED)",
+        labels=['namespace'],
+    )
+    volume_backups_due = GaugeMetricFamily(
         'volume_backups_due',
         "Volumes to backup by due date (in hours)",
         labels=['namespace'],
     )
     volume_backup_age = GaugeHistogramMetricFamily(
         'volume_backup_age',
-        "Volumes to backup by last success age (in hours)",
+        "Volumes to backup by last success age (in hours) (DEPRECATED)",
         labels=['namespace'],
+    )
+    volume_last_backup = GaugeMetricFamily(
+        'volume_last_backup',
+        "Date of last backup of each volume",
+        labels=['namespace', 'persistentvolumeclaim'],
     )
     volume_never_backed_up = GaugeMetricFamily(
         'volume_never_backed_up',
@@ -139,6 +149,11 @@ def collect(show_table=False):
             age = min(AGE_BUCKETS, age)
             data['age'][age] += 1
 
+            volume_last_backup.add_metric(
+                [vol['namespace'], vol['name']],
+                vol['last_backup'].timestamp(),
+            )
+
     for namespace, data in namespaces.items():
         volumes_backed_up.add_metric([namespace], data['volumes'])
 
@@ -151,7 +166,10 @@ def collect(show_table=False):
             buckets.append((str(due), sum_value))
         sum_value += data['due'][24]
         buckets.append(('+Inf', sum_value))
-        volume_backup_due.add_metric([namespace], buckets, sum_value)
+        volume_backups_due_hist.add_metric([namespace], buckets, sum_value)
+
+        if data['due'][0] > 0:
+            volume_backups_due.add_metric([namespace], data['due'][0])
 
         sum_value = 0
         buckets = []
@@ -230,8 +248,10 @@ def collect(show_table=False):
 
     return [
         volumes_backed_up,
-        volume_backup_due,
+        volume_backups_due_hist,
+        volume_backups_due,
         volume_backup_age,
+        volume_last_backup,
         volume_never_backed_up,
         running_backup_jobs,
         failed_backup_jobs,
